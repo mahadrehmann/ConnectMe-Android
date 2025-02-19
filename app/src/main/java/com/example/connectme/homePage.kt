@@ -43,6 +43,11 @@ class homePage : AppCompatActivity() {
                     startActivity(intent)
                     true
                 }
+                R.id.contacts -> {
+                    val intent = Intent(this, ContactsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
                 else -> false
             }
         }

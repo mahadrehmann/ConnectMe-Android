@@ -2,7 +2,6 @@ package com.example.connectme
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -10,7 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.EditText
 
-class ChatActivity : AppCompatActivity() {
+class VanishChat : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var messageAdapter: MessageAdapter
@@ -18,7 +17,7 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_chat)
+        setContentView(R.layout.activity_vanish_chat)
 
         // Get the intent data (User info passed from DM page)
         val userName = intent.getStringExtra("userName")
@@ -42,6 +41,19 @@ class ChatActivity : AppCompatActivity() {
         messageAdapter = MessageAdapter(chatMessages, profileImageResId)
         recyclerView.adapter = messageAdapter
 
+        val sendButton = findViewById<ImageView>(R.id.ivSend)
+        val messageInput = findViewById<EditText>(R.id.etMessage)
+
+        sendButton.setOnClickListener {
+            val message = messageInput.text.toString()
+            if (message.isNotEmpty()) {
+                // Add the sent message to the chat list
+                chatMessages.add(Message(message, isSender = true, time = "Now"))
+                messageAdapter.notifyDataSetChanged()
+                recyclerView.scrollToPosition(chatMessages.size - 1)
+                messageInput.text.clear()
+            }
+        }
 
         // Back button to close chat
         findViewById<ImageView>(R.id.ivBack).setOnClickListener {
@@ -58,14 +70,6 @@ class ChatActivity : AppCompatActivity() {
         val videoButton = findViewById<ImageView>(R.id.ivVideoCall)
         videoButton.setOnClickListener {
             val intent = Intent(this, VideoCallActivity::class.java)
-            intent.putExtra("userName", userName)  // Pass the user's name
-            intent.putExtra("profileImage", profileImageResId)  // Pass the user's profile image
-            startActivity(intent)
-        }
-
-        val vanish = findViewById<ImageView>(R.id.ivProfilePicture)
-        vanish.setOnClickListener {
-            val intent = Intent(this, VanishChat::class.java)
             intent.putExtra("userName", userName)  // Pass the user's name
             intent.putExtra("profileImage", profileImageResId)  // Pass the user's profile image
             startActivity(intent)

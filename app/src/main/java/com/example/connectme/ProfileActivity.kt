@@ -82,5 +82,31 @@ class ProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        findViewById<BottomNavigationView>(R.id.bottomNavigation).setOnNavigationItemSelectedListener {
+            when (it.itemId) {
+                R.id.search -> {
+                    val intent = Intent(this, SearchActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                R.id.add -> {
+                    val intent = Intent(this, UploadActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                R.id.home -> {
+                    val intent = Intent(this, homePage::class.java)
+                    startActivity(intent)
+                    true
+                }
+                R.id.contacts -> {
+                    val intent = Intent(this, ContactsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                else -> false
+            }
+        }
+
     }
 }

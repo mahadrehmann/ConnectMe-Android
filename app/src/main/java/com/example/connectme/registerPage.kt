@@ -34,7 +34,6 @@ class registerPage : AppCompatActivity() {
         val registerButton = findViewById<Button>(R.id.registerButton)
         val loginText = findViewById<TextView>(R.id.loginText)
 
-
         // Navigate to Login page if the user already has an account
         loginText.setOnClickListener {
             val intent = Intent(this, loginPage::class.java)

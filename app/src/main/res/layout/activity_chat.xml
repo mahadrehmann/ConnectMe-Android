@@ -93,9 +93,16 @@
             android:textColor="#000000"/>
 
         <ImageView
+            android:id="@+id/ivSendMedia"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:src="@drawable/baseline_add_photo"
+            android:padding="8dp"/>
+
+        <ImageView
             android:id="@+id/ivSend"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
             android:src="@drawable/send"
             android:padding="8dp"/>
     </LinearLayout>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <!-- ImageView for displaying the selected story image -->
+    <ImageView
+        android:id="@+id/storyImageView"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_alignParentTop="true"
+        android:scaleType="centerCrop"
+        android:src="@drawable/circle_background" />
+
+    <!-- Optional: Caption input for the story (if desired) -->
+    <EditText
+        android:id="@+id/captionInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Add a caption (optional)"
+        android:layout_below="@id/storyImageView"
+        android:layout_marginTop="16dp"
+        android:padding="8dp" />
+
+    <!-- Button to upload the story -->
+    <Button
+        android:id="@+id/uploadStoryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Upload Story"
+        android:layout_below="@id/captionInput"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#5A412C"
+        android:textColor="@android:color/white" />
+</RelativeLayout>

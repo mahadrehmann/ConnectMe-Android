@@ -16,12 +16,6 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // Optional: Allow user to continue immediately by clicking the continue button
-        val continueButton: Button = findViewById(R.id.continuebutton)
-        continueButton.setOnClickListener {
-            navigateToLogin()
-        }
-
         // Automatically navigate after 5 seconds
         Handler(Looper.getMainLooper()).postDelayed({
             navigateToLogin()

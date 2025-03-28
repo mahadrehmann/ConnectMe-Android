@@ -215,46 +215,63 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
     }
 
     override fun onEditMessage(message: Message) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Edit Message")
-        val input = EditText(this)
-        input.setText(message.text)
-        builder.setView(input)
-        builder.setPositiveButton("Save") { dialog, _ ->
-            val newText = input.text.toString().trim()
-            if (newText.isNotEmpty()) {
-                chatDbRef.child(message.id).child("text").setValue(newText)
-                chatDbRef.child(message.id).child("lastEdited").setValue(System.currentTimeMillis())
-                message.text = newText
-                message.lastEdited = System.currentTimeMillis()
-                messageAdapter.notifyDataSetChanged()
-                Toast.makeText(this, "Message updated", Toast.LENGTH_SHORT).show()
+        if (canEditOrDelete(message)) {
+            // Show a dialog with an EditText pre-filled with the message text
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Edit Message")
+
+            val input = EditText(this)
+            input.setText(message.text)
+            builder.setView(input)
+
+            builder.setPositiveButton("Save") { dialog, _ ->
+                val newText = input.text.toString().trim()
+                if (newText.isNotEmpty()) {
+                    // Update the message in Firebase
+                    chatDbRef.child(message.id).child("text").setValue(newText)
+                    chatDbRef.child(message.id).child("lastEdited").setValue(System.currentTimeMillis())
+
+                    // Update the local message object and UI
+                    message.text = newText
+                    message.lastEdited = System.currentTimeMillis()
+                    messageAdapter.notifyDataSetChanged()
+
+                    Toast.makeText(this, "Message updated", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
             }
-            dialog.dismiss()
+
+            builder.setNegativeButton("Cancel") { dialog, _ ->
+                dialog.cancel()
+            }
+
+            builder.show()
+        } else {
+            Toast.makeText(this, "You can only edit messages within 5 minutes", Toast.LENGTH_SHORT).show()
         }
-        builder.setNegativeButton("Cancel") { dialog, _ ->
-            dialog.cancel()
-        }
-        builder.show()
     }
 
     override fun onDeleteMessage(message: Message) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Delete Message")
-        builder.setMessage("Are you sure you want to delete this message?")
-        builder.setPositiveButton("Yes") { dialog, _ ->
-            chatDbRef.child(message.id).removeValue().addOnSuccessListener {
-                chatMessages.remove(message)
-                messageAdapter.notifyDataSetChanged()
-                Toast.makeText(this, "Message deleted", Toast.LENGTH_SHORT).show()
-            }.addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to delete message: ${e.message}", Toast.LENGTH_SHORT).show()
+        if (canEditOrDelete(message)) {
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Delete Message")
+            builder.setMessage("Are you sure you want to delete this message?")
+            builder.setPositiveButton("Yes") { dialog, _ ->
+                chatDbRef.child(message.id).removeValue().addOnSuccessListener {
+                    chatMessages.remove(message)
+                    messageAdapter.notifyDataSetChanged()
+                    Toast.makeText(this, "Message deleted", Toast.LENGTH_SHORT).show()
+                }.addOnFailureListener { e ->
+                    Toast.makeText(this, "Failed to delete message: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
             }
-            dialog.dismiss()
+            builder.setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            builder.show()
+        } else {
+            Toast.makeText(this, "You can only delete messages within 5 minutes", Toast.LENGTH_SHORT).show()
         }
-        builder.setNegativeButton("No") { dialog, _ ->
-            dialog.dismiss()
-        }
-        builder.show()
     }
 }

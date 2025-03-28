@@ -87,8 +87,8 @@ class AddStoryActivity : AppCompatActivity() {
                 storyRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                     // Create a Story object
                     val story = Story(
-                        userName = "Your User Name", // Replace with the current user's name
-                        userProfilePic = "https://...", // Replace with current user's profile picture URL
+                        userName = "Mahad Rehman", // Replace with the current user's name
+                        userProfilePic = "img", // Replace with current user's profile picture URL
                         storyImage = downloadUrl.toString(),
                         timestamp = System.currentTimeMillis()
                     )

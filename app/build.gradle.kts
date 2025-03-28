@@ -41,6 +41,7 @@ android {
 
 dependencies {
 
+    implementation ("io.agora.rtc:full-sdk:4.5.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

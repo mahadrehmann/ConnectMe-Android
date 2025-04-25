@@ -1,8 +1,11 @@
 package com.example.connectme
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -11,49 +14,53 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.storage.FirebaseStorage
-import java.io.File
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.google.firebase.database.ValueEventListener
+import java.io.ByteArrayOutputStream
 
 class ChatActivity : AppCompatActivity(), MessageActionListener {
+
+    private lateinit var tvStatus: TextView
+    private lateinit var otherUserId: String
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var chatMessages: MutableList<Message>
+
     private val chatDbRef = FirebaseDatabase.getInstance().getReference("Chats")
         .child("ChatID_12345").child("messages")
-    // For media sharing:
+
     private var selectedMediaUri: Uri? = null
-    // Register for media picker result
+
     private val mediaPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val uri = result.data?.data
         if (uri != null) {
             selectedMediaUri = uri
             Toast.makeText(this, "Media attached", Toast.LENGTH_SHORT).show()
-            // Optionally, you can display a thumbnail or update UI here.
         }
     }
 
-    // Helper function to copy URI content to a temporary file
-    private fun copyUriToTempFile(uri: Uri): Uri? {
+    private fun uriToBitmap(context: android.content.Context, uri: Uri): Bitmap? {
         return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File(cacheDir, "temp_media_${System.currentTimeMillis()}.jpg")
-            FileOutputStream(tempFile).use { outputStream ->
-                inputStream.copyTo(outputStream)
-            }
-            inputStream.close()
-            Uri.fromFile(tempFile)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            bitmap
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 5, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,19 +68,56 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
         enableEdgeToEdge()
         setContentView(R.layout.activity_chat)
 
-        val userName = intent.getStringExtra("userName")
-        val profileImageResId = intent.getIntExtra("profileImage", R.drawable.asim)
+        // Pull from Intent
+        val userName       = intent.getStringExtra("userName") ?: "Unknown"
+        val profileBase64  = intent.getStringExtra("profileImageBase64").orEmpty()
+        otherUserId        = intent.getStringExtra("userId") ?: ""        // new
+
+        // Wire up views
+        tvStatus          = findViewById(R.id.tvStatus)
+        findViewById<TextView>(R.id.tvUserName).text = userName
+        // … load profile pic …
+
+        // 2) PRESENCE LISTENER
+        if (otherUserId.isNotBlank()) {
+            val statusRef = FirebaseDatabase.getInstance()
+                .getReference("Users")
+                .child(otherUserId)
+                .child("online")
+            statusRef.addValueEventListener(object: ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val isOnline = snapshot.getValue(Boolean::class.java) ?: false
+                    tvStatus.text = if (isOnline) "Online" else "Offline"
+                }
+                override fun onCancelled(error: DatabaseError) { /* no‑op */ }
+            })
+        }
+
+//        val userName = intent.getStringExtra("userName") ?: "Unknown"
+//        val profileBase64 = intent.getStringExtra("profileImageBase64").orEmpty()
 
         findViewById<TextView>(R.id.tvUserName).text = userName
-        findViewById<ImageView>(R.id.ivProfilePicture).setImageResource(profileImageResId)
+
+        val ivProfile = findViewById<ImageView>(R.id.ivProfilePicture)
+        if (profileBase64.isNotEmpty()) {
+            try {
+                val decodedBytes = Base64.decode(profileBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                ivProfile.setImageBitmap(bitmap)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ivProfile.setImageResource(R.drawable.circle_background)
+            }
+        } else {
+            ivProfile.setImageResource(R.drawable.circle_background)
+        }
 
         chatMessages = mutableListOf()
         recyclerView = findViewById(R.id.rvChatMessages)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        messageAdapter = MessageAdapter(chatMessages, profileImageResId, this)
+        messageAdapter = MessageAdapter(chatMessages, R.drawable.circle_background, this)
         recyclerView.adapter = messageAdapter
 
-        // Attach Firebase listener to load messages
         chatDbRef.addChildEventListener(object : com.google.firebase.database.ChildEventListener {
             override fun onChildAdded(snapshot: com.google.firebase.database.DataSnapshot, previousChildName: String?) {
                 val message = snapshot.getValue(Message::class.java)
@@ -82,10 +126,10 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
                     messageAdapter.notifyDataSetChanged()
                 }
             }
-            override fun onChildChanged(snapshot: com.google.firebase.database.DataSnapshot, previousChildName: String?) { }
-            override fun onChildRemoved(snapshot: com.google.firebase.database.DataSnapshot) { }
-            override fun onChildMoved(snapshot: com.google.firebase.database.DataSnapshot, previousChildName: String?) { }
-            override fun onCancelled(error: com.google.firebase.database.DatabaseError) { }
+            override fun onChildChanged(snapshot: com.google.firebase.database.DataSnapshot, previousChildName: String?) {}
+            override fun onChildRemoved(snapshot: com.google.firebase.database.DataSnapshot) {}
+            override fun onChildMoved(snapshot: com.google.firebase.database.DataSnapshot, previousChildName: String?) {}
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
         })
 
         findViewById<ImageView>(R.id.ivBack).setOnClickListener {
@@ -94,38 +138,26 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
 
         findViewById<ImageView>(R.id.ivCall).setOnClickListener {
             val intent = Intent(this, CallActivity::class.java)
-            intent.putExtra("userName", userName)  // Pass the user's name
-            intent.putExtra("profileImage", profileImageResId)  // Pass the user's profile image
-            startActivity(intent)
-        }
-
-        findViewById<ImageView>(R.id.ivCall).setOnClickListener {
-            val intent = Intent(this, CallActivity::class.java)
             intent.putExtra("userName", userName)
-            intent.putExtra("profileImage", profileImageResId)
+            intent.putExtra("profileImageBase64", profileBase64)
             startActivity(intent)
         }
 
-        val videoButton = findViewById<ImageView>(R.id.ivVideoCall)
-        videoButton.setOnClickListener {
+        findViewById<ImageView>(R.id.ivVideoCall).setOnClickListener {
             val intent = Intent(this, VideoCallActivity::class.java)
             intent.putExtra("userName", userName)
-            intent.putExtra("profileImage", profileImageResId)
+            intent.putExtra("profileImageBase64", profileBase64)
             startActivity(intent)
         }
 
-        // Vanish mode via profile picture click (as before)
-        val vanish = findViewById<ImageView>(R.id.ivProfilePicture)
-        vanish.setOnClickListener {
+        ivProfile.setOnClickListener {
             val intent = Intent(this, VanishChat::class.java)
             intent.putExtra("userName", userName)
-            intent.putExtra("profileImage", profileImageResId)
+            intent.putExtra("profileImageBase64", profileBase64)
             startActivity(intent)
         }
 
-        // New: Attach button for media sharing (ensure your layout has an ImageView with id ivAttach)
-        val attachButton = findViewById<ImageView>(R.id.ivSendMedia)
-        attachButton?.setOnClickListener {
+        findViewById<ImageView>(R.id.ivSendMedia)?.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK)
             intent.type = "image/*"
             mediaPicker.launch(intent)
@@ -135,49 +167,38 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
         val messageInput = findViewById<EditText>(R.id.etMessage)
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
-            // If media is attached, send media message
             if (selectedMediaUri != null) {
-                val tempUri = copyUriToTempFile(selectedMediaUri!!)
-                if (tempUri == null) {
+                val bitmap = uriToBitmap(this, selectedMediaUri!!)
+                if (bitmap == null) {
                     Toast.makeText(this, "Failed to process the selected media", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                val storageRef = FirebaseStorage.getInstance().reference
-                val mediaRef = storageRef.child("chat_media/${System.currentTimeMillis()}.jpg")
-                mediaRef.putFile(tempUri).addOnSuccessListener { taskSnapshot ->
-                    mediaRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        val newMessage = Message(
-                            id = "",
-                            text = if (text.isNotEmpty()) text else null,  // Optional caption
-                            imageUrl = downloadUrl.toString(),
-                            isSender = true,
-                            time = System.currentTimeMillis(),
-                            lastEdited = null,
-                            isRead = false
-                        )
-                        val messageKey = chatDbRef.push().key
-                        if (messageKey != null) {
-                            newMessage.id = messageKey
-                            chatDbRef.child(messageKey).setValue(newMessage)
-                                .addOnSuccessListener {
-                                    chatMessages.add(newMessage)
-                                    messageAdapter.notifyDataSetChanged()
-                                    recyclerView.scrollToPosition(chatMessages.size - 1)
-                                    messageInput.text.clear()
-                                    selectedMediaUri = null // Clear media attachment after sending
-                                }
-                                .addOnFailureListener { e ->
-                                    Toast.makeText(this, "Failed to send media message: ${e.message}", Toast.LENGTH_SHORT).show()
-                                }
+                val base64Image = bitmapToBase64(bitmap)
+                val newMessage = Message(
+                    id = "",
+                    text = if (text.isNotEmpty()) text else null,
+                    imageUrl = base64Image,
+                    isSender = true,
+                    time = System.currentTimeMillis(),
+                    lastEdited = null,
+                    isRead = false
+                )
+                val messageKey = chatDbRef.push().key
+                if (messageKey != null) {
+                    newMessage.id = messageKey
+                    chatDbRef.child(messageKey).setValue(newMessage)
+                        .addOnSuccessListener {
+                            chatMessages.add(newMessage)
+                            messageAdapter.notifyDataSetChanged()
+                            recyclerView.scrollToPosition(chatMessages.size - 1)
+                            messageInput.text.clear()
+                            selectedMediaUri = null
                         }
-                    }.addOnFailureListener { e ->
-                        Toast.makeText(this, "Failed to get download URL: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }.addOnFailureListener { e ->
-                    Toast.makeText(this, "Media upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        .addOnFailureListener { e ->
+                            Toast.makeText(this, "Failed to send media message: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                 }
             } else if (text.isNotEmpty()) {
-                // Send a text message if there's no media attached
                 val newMessage = Message(
                     id = "",
                     text = text,
@@ -207,44 +228,34 @@ class ChatActivity : AppCompatActivity(), MessageActionListener {
         }
     }
 
-    // Check if the message is within the 5-minute edit/delete window
     private fun canEditOrDelete(message: Message): Boolean {
         val currentTime = System.currentTimeMillis()
         val timeDifference = currentTime - message.time
-        return timeDifference <= 5 * 60 * 1000  // 5 minutes in milliseconds
+        return timeDifference <= 5 * 60 * 1000
     }
 
     override fun onEditMessage(message: Message) {
         if (canEditOrDelete(message)) {
-            // Show a dialog with an EditText pre-filled with the message text
             val builder = AlertDialog.Builder(this)
             builder.setTitle("Edit Message")
-
             val input = EditText(this)
             input.setText(message.text)
             builder.setView(input)
-
             builder.setPositiveButton("Save") { dialog, _ ->
                 val newText = input.text.toString().trim()
                 if (newText.isNotEmpty()) {
-                    // Update the message in Firebase
                     chatDbRef.child(message.id).child("text").setValue(newText)
                     chatDbRef.child(message.id).child("lastEdited").setValue(System.currentTimeMillis())
-
-                    // Update the local message object and UI
                     message.text = newText
                     message.lastEdited = System.currentTimeMillis()
                     messageAdapter.notifyDataSetChanged()
-
                     Toast.makeText(this, "Message updated", Toast.LENGTH_SHORT).show()
                 }
                 dialog.dismiss()
             }
-
             builder.setNegativeButton("Cancel") { dialog, _ ->
                 dialog.cancel()
             }
-
             builder.show()
         } else {
             Toast.makeText(this, "You can only edit messages within 5 minutes", Toast.LENGTH_SHORT).show()

@@ -33,25 +33,31 @@
 
     </RelativeLayout>
 
-    <!-- Horizontal Scroll of Images -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fillViewport="true"
-        android:scrollbars="none">
+<!--    &lt;!&ndash; Horizontal Scroll of Images &ndash;&gt;-->
+<!--    <HorizontalScrollView-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:fillViewport="true"-->
+<!--        android:scrollbars="none">-->
 
-        <GridView
-            android:id="@+id/gvImages"
-            android:layout_width="wrap_content"
-            android:layout_height="400dp"
-            android:numColumns="auto_fit"
-            android:horizontalSpacing="8dp"
-            android:verticalSpacing="0dp"
-            android:stretchMode="columnWidth"
-            android:scrollbars="none"
-            android:isScrollContainer="false"
-            android:layoutDirection="ltr"/>
-    </HorizontalScrollView>
+<!--        <GridView-->
+<!--            android:id="@+id/gvImages"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="400dp"-->
+<!--            android:numColumns="auto_fit"-->
+<!--            android:horizontalSpacing="8dp"-->
+<!--            android:verticalSpacing="0dp"-->
+<!--            android:stretchMode="columnWidth"-->
+<!--            android:scrollbars="none"-->
+<!--            android:isScrollContainer="false"-->
+<!--            android:layoutDirection="ltr"/>-->
+<!--    </HorizontalScrollView>-->
+    <ImageView
+        android:id="@+id/ivSelectedImage"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:scaleType="centerCrop"
+        android:layout_marginBottom="16dp" />
 
 
     <EditText

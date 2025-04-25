@@ -1,10 +1,12 @@
 package com.example.connectme
 
-// Inside AddStoryActivity.kt
-
+import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
@@ -12,40 +14,66 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.storage.FirebaseStorage
-import java.io.File
-import java.io.FileOutputStream
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
+
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 class AddStoryActivity : AppCompatActivity() {
 
     private var selectedStoryUri: Uri? = null
+    private var userName: String = ""
+    private var userProfilePic: String = ""
 
-    // Helper function to copy URI content to a temporary file
-    private fun copyUriToTempFile(uri: Uri): Uri? {
+    // Helper: Convert URI to Bitmap
+    fun uriToBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File(cacheDir, "temp_story_${System.currentTimeMillis()}.jpg")
-            FileOutputStream(tempFile).use { outputStream ->
-                inputStream.copyTo(outputStream)
-            }
-            inputStream.close()
-            Uri.fromFile(tempFile)
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            bitmap
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
+    // Helper: Convert Bitmap to Base64
+    fun bitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 5, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_add_story) // Create this layout as needed
+        setContentView(R.layout.activity_add_story)
 
         val imageView = findViewById<ImageView>(R.id.storyImageView)
-        val captionInput = findViewById<EditText>(R.id.captionInput) // optional
+        val captionInput = findViewById<EditText>(R.id.captionInput) // Optional
         val uploadButton = findViewById<Button>(R.id.uploadStoryButton)
 
-        // Set up image picker for story image
+        // Set up Firebase Auth and DB
+        val auth = FirebaseAuth.getInstance()
+        val userId = auth.currentUser?.uid
+
+        if (userId != null) {
+            val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
+            userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    userName = snapshot.child("name").getValue(String::class.java) ?: ""
+                    userProfilePic = snapshot.child("profilePic").getValue(String::class.java) ?: ""
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Toast.makeText(this@AddStoryActivity, "Failed to load user info", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+
+        // Image Picker
         val result = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { activityResult ->
             val uri = activityResult.data?.data
             if (uri != null) {
@@ -61,53 +89,38 @@ class AddStoryActivity : AppCompatActivity() {
             result.launch(intent)
         }
 
+        // Upload Button Click
         uploadButton.setOnClickListener {
             if (selectedStoryUri == null) {
                 Toast.makeText(this, "Please select a story image", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Copy the file to a temporary file for better accessibility
-            val tempUri = copyUriToTempFile(selectedStoryUri!!)
-            if (tempUri == null) {
-                Log.e("AddStoryActivity", "------||--------Failed to create temporary file from selected URI: $selectedStoryUri")
+            val bitmap = uriToBitmap(this, selectedStoryUri!!)
+            if (bitmap == null) {
                 Toast.makeText(this, "Failed to process the selected image", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
-            } else {
-                Log.d("AddStoryActivity", "------||--------Temporary file created at: ${tempUri.path}")
             }
 
-            val tempFile = File(tempUri.path!!)
-            Log.d("AddStoryActivity", "-----------||--------Temporary file exists: ${tempFile.exists()}, size: ${tempFile.length()} bytes, path: ${tempFile.absolutePath}")
+            val base64Image = bitmapToBase64(bitmap)
+            Log.d("AddStoryActivity", "Base64 String Length: ${base64Image.length}")
 
-            val storageRef = FirebaseStorage.getInstance().reference
-            val storyRef = storageRef.child("stories/${System.currentTimeMillis()}.jpg")
+            val story = Story(
+                userName = userName,
+                userProfilePic = userProfilePic,
+                storyImage = base64Image,
+                timestamp = System.currentTimeMillis()
+            )
 
-            storyRef.putFile(tempUri).addOnSuccessListener { taskSnapshot ->
-                storyRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    // Create a Story object
-                    val story = Story(
-                        userName = "Mahad Rehman", // Replace with the current user's name
-                        userProfilePic = "img", // Replace with current user's profile picture URL
-                        storyImage = downloadUrl.toString(),
-                        timestamp = System.currentTimeMillis()
-                    )
-
-                    // Save the story in Realtime Database under "Stories"
-                    val dbRef = FirebaseDatabase.getInstance().getReference("Stories")
-                    val key = dbRef.push().key
-                    if (key != null) {
-                        dbRef.child(key).setValue(story).addOnSuccessListener {
-                            Toast.makeText(this, "Story uploaded successfully", Toast.LENGTH_SHORT).show()
-                            finish() // Close the activity after upload
-                        }.addOnFailureListener { e ->
-                            Toast.makeText(this, "Failed to save story: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+            val dbRef = FirebaseDatabase.getInstance().getReference("Stories")
+            val key = dbRef.push().key
+            if (key != null) {
+                dbRef.child(key).setValue(story).addOnSuccessListener {
+                    Toast.makeText(this, "Story uploaded successfully", Toast.LENGTH_SHORT).show()
+                    finish()
+                }.addOnFailureListener { e ->
+                    Toast.makeText(this, "Failed to save story: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-            }.addOnFailureListener { e ->
-                Toast.makeText(this, "Image upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                Log.e("AddStoryActivity", "Image upload failed", e)
             }
         }
     }

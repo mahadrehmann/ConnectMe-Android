@@ -45,6 +45,16 @@
             android:layout_height="wrap_content"
             android:src="@drawable/baseline_videocam_24"
             android:padding="8dp" />
+
+        <!-- NEW: status line -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Offline"
+            android:textSize="14sp"
+            android:textColor="#888888"
+            />
     </LinearLayout>
 
     <ImageView

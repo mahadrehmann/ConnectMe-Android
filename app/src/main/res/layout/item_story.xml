@@ -4,13 +4,12 @@
     android:layout_height="70dp"
     android:layout_margin="8dp">
 
-    <!-- Story image (the main content of the story) -->
+    <!-- Circular profile image for story -->
     <ImageView
-        android:id="@+id/storyImageView"
+        android:id="@+id/ivProfileOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
+        android:clipToOutline="true"
         android:background="@drawable/circle_background" />
-
-    <!-- Optionally, add overlays such as profile picture and username here -->
 </FrameLayout>

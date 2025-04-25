@@ -20,6 +20,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- Top Bar -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -45,17 +46,19 @@
                     app:tint="@android:color/black" />
             </LinearLayout>
 
+            <!-- Profile Picture -->
             <ImageView
                 android:id="@+id/ivProfilePicture"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
                 android:layout_gravity="center"
-                android:src="@drawable/mahad"
+                android:src="@drawable/circle_background"
                 android:scaleType="centerCrop"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/circle_background"
-                android:clipToOutline="true"/>
+                android:clipToOutline="true" />
 
+            <!-- Username -->
             <TextView
                 android:id="@+id/tvUserName"
                 android:layout_width="wrap_content"
@@ -66,6 +69,7 @@
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp" />
 
+            <!-- Bio -->
             <TextView
                 android:id="@+id/tvBio"
                 android:layout_width="wrap_content"
@@ -75,6 +79,7 @@
                 android:layout_gravity="center"
                 android:layout_marginTop="4dp" />
 
+            <!-- Stats: Posts, Followers, Following -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -82,6 +87,7 @@
                 android:gravity="center"
                 android:layout_marginTop="16dp">
 
+                <!-- Posts -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -92,7 +98,7 @@
                         android:id="@+id/tvPosts"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="7"
+                        android:text="0"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -104,6 +110,7 @@
                         android:textColor="@android:color/darker_gray" />
                 </LinearLayout>
 
+                <!-- Followers -->
                 <LinearLayout
                     android:id="@+id/followers"
                     android:layout_width="wrap_content"
@@ -116,7 +123,7 @@
                         android:id="@+id/tvFollowers"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="410"
+                        android:text="0"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -128,6 +135,7 @@
                         android:textColor="@android:color/darker_gray" />
                 </LinearLayout>
 
+                <!-- Following -->
                 <LinearLayout
                     android:id="@+id/following"
                     android:layout_width="wrap_content"
@@ -140,7 +148,7 @@
                         android:id="@+id/tvFollowing"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="387"
+                        android:text="0"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -153,6 +161,7 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Posts Grid -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvPosts"
                 android:layout_width="match_parent"
@@ -165,6 +174,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Bottom Navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
@@ -172,10 +182,8 @@
         android:layout_alignParentBottom="true"
         android:layout_gravity="bottom"
         app:labelVisibilityMode="labeled"
-        android:layout_marginBottom="0dp"
         app:itemIconTint="@color/bottom_nav_color"
         app:itemTextColor="@color/bottom_nav_color"
         app:menu="@menu/bottom_nav_menu" />
-
 
 </RelativeLayout>

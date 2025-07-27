@@ -29,9 +29,9 @@ class VideoCallActivity : AppCompatActivity() {
     companion object {
         private const val PERMISSION_REQ_ID = 22
     }
-    private val myAppId = "your_app_id"
+    private val myAppId = "0c35b0f5e5544c9f90c74fa958a5f931"
     private val channelName = "ConnectMe"
-    private val token = "your_token"
+    private val token = "007eJxTYDA8PsmCt6lzp858/3mvku7un3tgafXzp5cXOTk5fP5cpj1bgcEg2dg0ySDNNNXU1MQk2TLN0iDZ3CQt0dLUItE0zdLYUKmMI6MhkJHBf18oAyMUgvicDM75eXmpySW+qQwMAHvYIk0="
     private var mRtcEngine: RtcEngine? = null
     private val mRtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {

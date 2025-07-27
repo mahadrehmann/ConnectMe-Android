@@ -4,18 +4,16 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.util.Base64
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import io.agora.rtc2.Constants
-import io.agora.rtc2.IRtcEngineEventHandler
-import io.agora.rtc2.RtcEngine
-import io.agora.rtc2.RtcEngineConfig
-import io.agora.rtc2.ChannelMediaOptions
+import io.agora.rtc2.*
 
 class CallActivity : AppCompatActivity() {
 
@@ -23,33 +21,31 @@ class CallActivity : AppCompatActivity() {
         private const val PERMISSION_REQ_ID = 22
     }
 
-    private val myAppId = "your_app_id"
+    private val myAppId = "0c35b0f5e5544c9f90c74fa958a5f931"
     private val channelName = "ConnectMe"
-    private val token = "your_token"
+    private val token = "007eJxTYDA8PsmCt6lzp858/3mvku7un3tgafXzp5cXOTk5fP5cpj1bgcEg2dg0ySDNNNXU1MQk2TLN0iDZ3CQt0dLUItE0zdLYUKmMI6MhkJHBf18oAyMUgvicDM75eXmpySW+qQwMAHvYIk0="
     private var mRtcEngine: RtcEngine? = null
 
     private val mRtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
-            super.onJoinChannelSuccess(channel, uid, elapsed)
             runOnUiThread {
                 Toast.makeText(this@CallActivity, "Joined channel $channel", Toast.LENGTH_SHORT).show()
             }
         }
+
         override fun onUserJoined(uid: Int, elapsed: Int) {
-            super.onUserJoined(uid, elapsed)
             runOnUiThread {
                 Toast.makeText(this@CallActivity, "User joined: $uid", Toast.LENGTH_SHORT).show()
             }
         }
+
         override fun onUserOffline(uid: Int, reason: Int) {
-            super.onUserOffline(uid, reason)
             runOnUiThread {
                 Toast.makeText(this@CallActivity, "User offline: $uid", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // Check and request necessary permissions
     private fun checkPermissions(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
@@ -76,7 +72,6 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    // Initialize Agora engine for audio calls only
     private fun initializeAgoraAudioSDK() {
         try {
             val config = RtcEngineConfig().apply {
@@ -91,12 +86,12 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun startVoiceCall() {
-        mRtcEngine?.enableAudio()  // Enable audio functionality
+        mRtcEngine?.enableAudio()
         val options = ChannelMediaOptions().apply {
             clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
             publishMicrophoneTrack = true
-            publishCameraTrack = false  // Do not publish video
+            publishCameraTrack = false
         }
         mRtcEngine?.joinChannel(token, channelName, 0, options)
     }
@@ -107,40 +102,43 @@ class CallActivity : AppCompatActivity() {
 
         // Get user info from intent
         val userName = intent.getStringExtra("userName") ?: "Unknown"
-        val profileImageResId = intent.getIntExtra("profileImage", R.drawable.asim)
+        val profileBase64 = intent.getStringExtra("profileImageBase64").orEmpty()
 
-        // Set user info in UI
         findViewById<TextView>(R.id.tvUserName).text = userName
-        findViewById<ImageView>(R.id.ivProfilePicture).setImageResource(profileImageResId)
+        val ivProfile = findViewById<ImageView>(R.id.ivProfilePicture)
 
-        // End call button: finish activity
-        val endCallButton = findViewById<ImageView>(R.id.ivEndCall)
-        endCallButton.setOnClickListener { finish() }
+        if (profileBase64.isNotEmpty()) {
+            try {
+                val decodedBytes = Base64.decode(profileBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                ivProfile.setImageBitmap(bitmap)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ivProfile.setImageResource(R.drawable.circle_background)
+            }
+        } else {
+            ivProfile.setImageResource(R.drawable.circle_background)
+        }
 
-        // Mute button: toggle mute
-        val muteButton = findViewById<ImageView>(R.id.ivMute)
-        muteButton.setOnClickListener {
+        findViewById<ImageView>(R.id.ivEndCall).setOnClickListener { finish() }
+
+        findViewById<ImageView>(R.id.ivMute).setOnClickListener {
             mRtcEngine?.muteLocalAudioStream(true)
             Toast.makeText(this, "Muted", Toast.LENGTH_SHORT).show()
         }
 
-        // Speaker button: enable speakerphone
-        val speakerButton = findViewById<ImageView>(R.id.ivSpeaker)
-        speakerButton.setOnClickListener {
+        findViewById<ImageView>(R.id.ivSpeaker).setOnClickListener {
             mRtcEngine?.setEnableSpeakerphone(true)
             Toast.makeText(this, "Speaker enabled", Toast.LENGTH_SHORT).show()
         }
 
-        // (Optional) Video button: if pressed, navigate to VideoCallActivity (not used in voice call)
-        val videoButton = findViewById<ImageView>(R.id.ivVideo)
-        videoButton.setOnClickListener {
+        findViewById<ImageView>(R.id.ivVideo).setOnClickListener {
             val intent = Intent(this, VideoCallActivity::class.java)
             intent.putExtra("userName", userName)
-            intent.putExtra("profileImage", profileImageResId)
+            intent.putExtra("profileImageBase64", profileBase64)
             startActivity(intent)
         }
 
-        // Check permissions and start voice call
         if (checkPermissions()) {
             initializeAgoraAudioSDK()
             startVoiceCall()
@@ -151,9 +149,7 @@ class CallActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        mRtcEngine?.apply {
-            leaveChannel()
-        }
+        mRtcEngine?.leaveChannel()
         RtcEngine.destroy()
         mRtcEngine = null
     }
